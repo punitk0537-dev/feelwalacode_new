@@ -1,0 +1,93 @@
+pool: punit
+trigger:
+ branches:
+   include:
+      - main
+      - features/*
+ paths:
+   include:    # ye pipe lin jab chalegi jab koi changes hoga envirments/prod folder iske workingDirectory: '$(System.DefaultWorkingDirectory)/envirments/prod' path denge in stage
+    - envirments/prod/*
+
+# parameters:
+  # - name: scanchalo
+  #   displayName: tflint chalo ?
+  #   type: boolean
+    # type: string
+    # default: nhichalo
+    # values:
+    #   - chalo
+    #   - nhichalo
+
+
+stages:
+# - stage: scan
+#   displayName: scan
+#   condition: ${{parameters.scanchalo}} # for boolean agr select kiya to pipeline chalegi nhi kiya to nhi chalegi
+#   # condition: eq('chalo','${{parameters.scanchalo}}') # for string type value jab run time pr chalo select krenge tabhi pipelie chalegi
+#   jobs:
+#     - job: tflint
+#       steps:
+#       - task: PowerShell@2
+#         inputs:
+#           targetType: 'inline'
+#           script: 'tflint'
+- stage: plan
+  displayName: Plan
+  jobs:
+    - job: plan
+      displayName: Plan
+      steps:
+    
+      - task: TerraformTask@5
+        displayName: init
+        inputs:
+          provider: 'azurerm'
+          command: 'init'
+          workingDirectory: '$(System.DefaultWorkingDirectory)/envirments/prod'
+          backendServiceArm: 'punityml'
+          backendAzureRmStorageAccountName: 'punitsa'
+          backendAzureRmContainerName: 'tfstate'
+          backendAzureRmKey: 'prod.terraform.tfstate'
+      - task: TerraformTask@5
+        displayName: plan
+        inputs:
+          provider: 'azurerm'
+          command: 'plan'
+          workingDirectory: '$(System.DefaultWorkingDirectory)/envirments/prod'
+          environmentServiceNameAzureRM: 'punityml'
+- stage: Apporval
+  displayName: ManualApproval
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  pool: server
+  jobs:
+    - job: Approval
+      displayName: Approval
+      steps:
+      - task: ManualValidation@1
+        inputs:
+          notifyUsers: 'abc'
+          instructions: 'plan check krke approve kr do'
+# - stage: Apply
+#   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+#   jobs:
+#     - job: Apply
+#       steps:
+#       - task: TerraformTask@5
+#         inputs:
+#           provider: 'azurerm'
+#           command: 'init'
+#           workingDirectory: '$(System.DefaultWorkingDirectory)/envirments/prod'
+#           backendServiceArm: 'punityml'
+#           backendAzureRmStorageAccountName: 'punitsa'
+#           backendAzureRmContainerName: 'tfstate'
+#           backendAzureRmKey: 'prod.terraform.tfstate'
+#       - task: TerraformTask@5
+#         inputs:
+#           provider: 'azurerm'
+#           command: 'apply'
+#           workingDirectory: '$(System.DefaultWorkingDirectory)/envirments/prod'
+#           environmentServiceNameAzureRM: 'punityml'
+
+
+
+ 
